@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - LinkedIn Scraper{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="fas fa-cog me-3"></i>
+            Settings
+        </h1>
+        <p class="lead">Configure LinkedIn credentials and scraping parameters</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- LinkedIn Credentials -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fab fa-linkedin me-2"></i>
+                    LinkedIn Credentials
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('settings') }}">
+                    <input type="hidden" name="form_type" value="credentials">
+                    
+                    {% if credentials %}
+                        <div class="alert alert-success" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Credentials configured for: <strong>{{ credentials.email }}</strong>
+                            {% if credentials.last_used %}
+                                <br><small class="text-muted">Last used: {{ credentials.last_used.strftime('%Y-%m-%d %H:%M') }}</small>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No LinkedIn credentials configured. Add your credentials to start scraping.
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope me-1"></i>
+                            LinkedIn Email *
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ credentials.email if credentials else '' }}" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock me-1"></i>
+                            LinkedIn Password *
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               placeholder="Enter your LinkedIn password" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Your password is stored securely and only used for LinkedIn authentication.
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        {{ 'Update' if credentials else 'Save' }} Credentials
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scraping Settings -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-sliders-h me-2"></i>
+                    Scraping Settings
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('settings') }}">
+                    <input type="hidden" name="form_type" value="scraping_settings">
+                    
+                    <div class="mb-3">
+                        <label for="min_delay" class="form-label">
+                            <i class="fas fa-clock me-1"></i>
+                            Minimum Delay (seconds)
+                        </label>
+                        <input type="number" class="form-control" id="min_delay" name="min_delay" 
+                               value="{{ settings.min_delay }}" min="1" max="10" step="0.1">
+                        <div class="form-text">
+                            Minimum wait time between requests (recommended: 2-3 seconds).
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="max_delay" class="form-label">
+                            <i class="fas fa-clock me-1"></i>
+                            Maximum Delay (seconds)
+                        </label>
+                        <input type="number" class="form-control" id="max_delay" name="max_delay" 
+                               value="{{ settings.max_delay }}" min="2" max="20" step="0.1">
+                        <div class="form-text">
+                            Maximum wait time between requests (recommended: 5-8 seconds).
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="max_requests_per_hour" class="form-label">
+                            <i class="fas fa-tachometer-alt me-1"></i>
+                            Max Requests per Hour
+                        </label>
+                        <input type="number" class="form-control" id="max_requests_per_hour" name="max_requests_per_hour" 
+                               value="{{ settings.max_requests_per_hour }}" min="10" max="50">
+                        <div class="form-text">
+                            Maximum number of requests per hour (recommended: 20-30).
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="max_leads_per_day" class="form-label">
+                            <i class="fas fa-calendar-day me-1"></i>
+                            Max Leads per Day
+                        </label>
+                        <input type="number" class="form-control" id="max_leads_per_day" name="max_leads_per_day" 
+                               value="{{ settings.max_leads_per_day }}" min="1" max="40">
+                        <div class="form-text">
+                            Daily limit for lead scraping (maximum: 40 leads for compliance).
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="headless_mode" name="headless_mode" 
+                                   {{ 'checked' if settings.headless_mode }}>
+                            <label class="form-check-label" for="headless_mode">
+                                <i class="fas fa-eye-slash me-1"></i>
+                                Headless Mode
+                            </label>
+                            <div class="form-text">
+                                Run browser in background without GUI (recommended for production).
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="use_proxy" name="use_proxy" 
+                                   {{ 'checked' if settings.use_proxy }}>
+                            <label class="form-check-label" for="use_proxy">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Use Proxy
+                            </label>
+                            <div class="form-text">
+                                Use proxy server for additional anonymity.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3" id="proxy_url_group" style="{{ 'display: none;' if not settings.use_proxy }}">
+                        <label for="proxy_url" class="form-label">
+                            <i class="fas fa-globe me-1"></i>
+                            Proxy URL
+                        </label>
+                        <input type="text" class="form-control" id="proxy_url" name="proxy_url" 
+                               value="{{ settings.proxy_url or '' }}" 
+                               placeholder="http://username:password@proxy-server:port">
+                        <div class="form-text">
+                            Format: http://username:password@proxy-server:port
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Safety Guidelines -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Safety & Compliance Guidelines
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Recommended Practices
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-clock text-muted me-2"></i>
+                                Use delays of 2-5 seconds between requests
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-limit text-muted me-2"></i>
+                                Limit to 50-100 profiles per day maximum
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-shield-alt text-muted me-2"></i>
+                                Use headless mode in production
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-user-clock text-muted me-2"></i>
+                                Respect LinkedIn's rate limits
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="text-danger">
+                            <i class="fas fa-times-circle me-2"></i>
+                            Avoid These Actions
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2">
+                                <i class="fas fa-ban text-muted me-2"></i>
+                                Don't scrape more than 40 profiles/day
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-flash text-muted me-2"></i>
+                                Don't use delays less than 1 second
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-robot text-muted me-2"></i>
+                                Don't run multiple concurrent sessions
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-envelope-spam text-muted me-2"></i>
+                                Don't use scraped data for spam
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Privacy Notice:</strong> Always comply with GDPR, CCPA, and other data protection regulations. 
+                    Only use scraped data for legitimate business purposes and respect user privacy rights.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const useProxyCheckbox = document.getElementById('use_proxy');
+    const proxyUrlGroup = document.getElementById('proxy_url_group');
+    
+    useProxyCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            proxyUrlGroup.style.display = 'block';
+        } else {
+            proxyUrlGroup.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

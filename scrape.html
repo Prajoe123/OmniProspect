@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Scrape LinkedIn - LinkedIn Scraper{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="fas fa-search me-3"></i>
+            LinkedIn Scraping
+        </h1>
+        <p class="lead">Configure and start a new prospect scraping session</p>
+    </div>
+</div>
+
+<!-- Daily Limit Status -->
+{% if limit_check and limit_check.limit_reached %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Daily Limit Reached:</strong> You have already scraped {{ limit_check.leads_today }} leads today (limit: {{ daily_limit }}). Please try again tomorrow.
+        </div>
+    </div>
+</div>
+{% elif limit_check and limit_check.remaining < 10 %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert">
+            <i class="fas fa-clock me-2"></i>
+            <strong>Limited Remaining:</strong> Only {{ limit_check.remaining }} leads remaining today out of {{ daily_limit }} daily limit.
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Scraping Form -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Scraping Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if limit_check and limit_check.limit_reached %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-ban fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Daily limit reached. Form disabled until tomorrow.</p>
+                    </div>
+                {% else %}
+                <form method="POST" action="{{ url_for('scrape') }}"
+                    <div class="mb-3">
+                        <label for="search_query" class="form-label">
+                            <i class="fas fa-search me-1"></i>
+                            Search Query *
+                        </label>
+                        <input type="text" class="form-control" id="search_query" name="search_query" 
+                               placeholder="e.g., Procurement Manager, Sales Director, CEO" required>
+                        <div class="form-text">
+                            Main search keywords to find prospects. Use job titles, skills, or company names.
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="role_filter" class="form-label">
+                                <i class="fas fa-user-tie me-1"></i>
+                                Role Filter
+                            </label>
+                            <input type="text" class="form-control" id="role_filter" name="role_filter" 
+                                   placeholder="e.g., Manager, Director, VP">
+                            <div class="form-text">
+                                Filter by specific job titles or roles.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="company_filter" class="form-label">
+                                <i class="fas fa-building me-1"></i>
+                                Company Filter
+                            </label>
+                            <input type="text" class="form-control" id="company_filter" name="company_filter" 
+                                   placeholder="e.g., Google, Microsoft, startups">
+                            <div class="form-text">
+                                Filter by company names or types.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="location_filter" class="form-label">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                Location Filter
+                            </label>
+                            <input type="text" class="form-control" id="location_filter" name="location_filter" 
+                                   placeholder="e.g., New York, San Francisco, Remote">
+                            <div class="form-text">
+                                Filter by geographic location.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="max_results" class="form-label">
+                                <i class="fas fa-hashtag me-1"></i>
+                                Maximum Results
+                            </label>
+                            <select class="form-select" id="max_results" name="max_results">
+                                <option value="10">10 results</option>
+                                <option value="25" selected>25 results</option>
+                                <option value="40">40 results (daily max)</option>
+                            </select>
+                            <div class="form-text">
+                                Daily limit: {{ daily_limit or 40 }} leads. Remaining today: {{ limit_check.remaining if limit_check else 40 }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" 
+                                {% if limit_check and limit_check.remaining == 0 %}disabled{% endif %}>
+                            <i class="fas fa-play me-2"></i>
+                            Start Scraping
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tips and Guidelines -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Best Practices
+                </h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Use specific job titles for better results
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Limit to maximum 40 prospects per day
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Combine multiple filters for precision
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Use industry-specific keywords
+                    </li>
+                </ul>
+                
+                <hr>
+                
+                <h6 class="text-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Rate Limits
+                </h6>
+                <p class="small text-muted">
+                    To avoid LinkedIn restrictions, this tool automatically adds delays between requests and limits daily usage. Your account safety is our priority.
+                </p>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-search me-2"></i>
+                    Search Examples
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Sales Professionals:</strong>
+                    <code class="d-block small mt-1">Sales Director OR VP Sales</code>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Tech Leaders:</strong>
+                    <code class="d-block small mt-1">CTO OR Chief Technology Officer</code>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Marketing Experts:</strong>
+                    <code class="d-block small mt-1">Marketing Manager AND SaaS</code>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Industry Specific:</strong>
+                    <code class="d-block small mt-1">Procurement Manager AND Manufacturing</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compliance Warning -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert">
+            <i class="fas fa-shield-alt me-2"></i>
+            <strong>Compliance & Ethics:</strong> This scraping tool is designed for legitimate business purposes only. 
+            Always respect LinkedIn's Terms of Service, user privacy, and applicable data protection laws. 
+            Use scraped data responsibly and obtain proper consent before contacting prospects.
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('button[type="submit"]');
+    
+    form.addEventListener('submit', function() {
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting Scrape...';
+    });
+});
+</script>
+{% endblock %}

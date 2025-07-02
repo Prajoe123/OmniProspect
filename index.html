@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LinkedIn Scraper{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="display-4">
+            <i class="fas fa-tachometer-alt me-3"></i>
+            Dashboard
+        </h1>
+        <p class="lead">Overview of your LinkedIn scraping activities</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h3 class="card-title">{{ total_leads }}</h3>
+                <p class="card-text">Total Leads</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info">
+            <div class="card-body text-center">
+                <i class="fas fa-search fa-2x mb-2"></i>
+                <h3 class="card-title">{{ total_sessions }}</h3>
+                <p class="card-text">Scrape Sessions</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h3 class="card-title">{{ completed_sessions }}</h3>
+                <p class="card-text">Completed</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-danger">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <h3 class="card-title">{{ failed_sessions }}</h3>
+                <p class="card-text">Failed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('scrape') }}" class="btn btn-primary btn-lg w-100">
+                            <i class="fas fa-search me-2"></i>
+                            Start New Scrape
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="{{ url_for('leads') }}" class="btn btn-secondary btn-lg w-100">
+                            <i class="fas fa-users me-2"></i>
+                            View All Leads
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Sessions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Recent Scrape Sessions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_sessions %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Search Query</th>
+                                    <th>Status</th>
+                                    <th>Leads Found</th>
+                                    <th>Created</th>
+                                    <th>Completed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for session in recent_sessions %}
+                                <tr>
+                                    <td>{{ session.id }}</td>
+                                    <td>{{ session.search_query }}</td>
+                                    <td>
+                                        {% if session.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif session.status == 'failed' %}
+                                            <span class="badge bg-danger">Failed</span>
+                                        {% elif session.status == 'running' %}
+                                            <span class="badge bg-warning">Running</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ session.total_leads or 0 }}</td>
+                                    <td>{{ session.created_at.strftime('%Y-%m-%d %H:%M') if session.created_at else 'N/A' }}</td>
+                                    <td>{{ session.completed_at.strftime('%Y-%m-%d %H:%M') if session.completed_at else 'N/A' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No scraping sessions yet. <a href="{{ url_for('scrape') }}">Start your first scrape</a>!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compliance Notice -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-warning" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Compliance Notice:</strong> This tool is designed for legitimate lead generation. Please respect LinkedIn's terms of service and rate limits. The system enforces a maximum of 40 profiles per day to ensure account safety and compliance.
+        </div>
+    </div>
+</div>
+{% endblock %}

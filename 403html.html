@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Authentication Error{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="text-center mt-5">
+                <i class="fas fa-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                <h1 class="display-4 mt-4">Authentication Error</h1>
+                <p class="lead text-muted">
+                    There was a problem with your login. Please try again.
+                </p>
+                <div class="mt-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="fas fa-home me-2"></i>
+                        Go Home
+                    </a>
+                    <a href="{{ url_for('replit_auth.login') }}" class="btn btn-outline-primary ms-2">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Try Again
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,2 +1,14 @@
+beautifulsoup4
+email-validator
+fake-useragent
 flask
+flask-dance
+flask-login
+flask-sqlalchemy
 gunicorn
+oauthlib
+pandas
+pyjwt
+sqlalchemy
+trafilatura
+werkzeug

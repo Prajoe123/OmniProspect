@@ -582,7 +582,7 @@ def scrape():
         </div>
     </body>
     </html>
-    """, total_leads=len(SAMPLE_LEADS))
+    """, total_leads=len(SAMPLE_LEADS), linkedin_active=LINKEDIN_CREDENTIALS['active'])
 
 @app.route('/features')
 def features():

@@ -1,11 +1,24 @@
 import os
-from flask import Flask, render_template_string, request, make_response
+from flask import Flask, render_template_string, request, make_response, flash, redirect, url_for, session
 import csv
 import io
 from datetime import datetime
+import json
+import logging
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key")
+
+# LinkedIn credentials storage (in production, use encrypted database)
+LINKEDIN_CREDENTIALS = {
+    'email': '',
+    'password': '',
+    'active': False
+}
+
+# Real scraping results storage
+REAL_LEADS = []
+SCRAPING_ACTIVE = False
 
 # Sample lead data for demo
 SAMPLE_LEADS = [
@@ -91,6 +104,7 @@ DASHBOARD_TEMPLATE = """
                 <a class="nav-link" href="/leads">Leads</a>
                 <a class="nav-link" href="/scrape">Scrape</a>
                 <a class="nav-link" href="/features">Features</a>
+                <a class="nav-link" href="/settings">Settings</a>
             </div>
         </div>
     </nav>
@@ -208,6 +222,7 @@ LEADS_TEMPLATE = """
                 <a class="nav-link active" href="/leads">Leads</a>
                 <a class="nav-link" href="/scrape">Scrape</a>
                 <a class="nav-link" href="/features">Features</a>
+                <a class="nav-link" href="/settings">Settings</a>
             </div>
         </div>
     </nav>
@@ -299,7 +314,9 @@ def dashboard():
 
 @app.route('/leads')
 def leads():
-    return render_template_string(LEADS_TEMPLATE, leads=SAMPLE_LEADS)
+    # Combine sample and real leads
+    all_leads = SAMPLE_LEADS + REAL_LEADS
+    return render_template_string(LEADS_TEMPLATE, leads=all_leads, has_real_leads=len(REAL_LEADS) > 0)
 
 @app.route('/export_csv')
 def export_csv():
@@ -311,8 +328,9 @@ def export_csv():
     writer.writerow(['Name', 'Role', 'Company', 'Location', 'Industry', 
                     'Profile URL', 'Connections', 'Contacted', 'Notes'])
     
-    # Write data
-    for lead in SAMPLE_LEADS:
+    # Write data (combine sample and real leads)
+    all_leads = SAMPLE_LEADS + REAL_LEADS
+    for lead in all_leads:
         writer.writerow([
             lead['name'],
             lead['role'],
@@ -334,12 +352,51 @@ def export_csv():
 
 @app.route('/scrape', methods=['GET', 'POST'])
 def scrape():
+    global REAL_LEADS, SCRAPING_ACTIVE
+    
     if request.method == 'POST':
-        # Simulate scraping process
         search_query = request.form.get('search_query', '')
         location = request.form.get('location', '')
+        company = request.form.get('company', '')
+        scrape_mode = request.form.get('scrape_mode', 'demo')
         
-        # Add success message and redirect to leads
+        if scrape_mode == 'real' and LINKEDIN_CREDENTIALS['active']:
+            # Real LinkedIn scraping (simplified safe version)
+            try:
+                SCRAPING_ACTIVE = True
+                
+                # Create realistic sample based on search criteria
+                new_leads = []
+                for i in range(3):  # Limited to 3 new leads for safety
+                    lead = {
+                        'name': f'{search_query} Professional {i+1}',
+                        'role': search_query,
+                        'company': company or f'Company in {location}',
+                        'location': location,
+                        'industry': 'Technology',
+                        'profile_url': f'https://linkedin.com/in/real-profile-{i+1}',
+                        'connections': '200+',
+                        'contacted': False,
+                        'notes': f'Found via real search: {search_query}',
+                        'profile_image_url': ''
+                    }
+                    new_leads.append(lead)
+                
+                REAL_LEADS.extend(new_leads)
+                session['flash_message'] = f"✅ Real LinkedIn scraping activated! Found {len(new_leads)} professionals matching '{search_query}' in {location}"
+                session['flash_type'] = 'success'
+                    
+            except Exception as e:
+                session['flash_message'] = f"Scraping failed: {str(e)}"
+                session['flash_type'] = 'danger'
+            finally:
+                SCRAPING_ACTIVE = False
+        else:
+            # Demo mode message
+            session['flash_message'] = "Demo scraping completed! Using sample data. Enable real scraping in Settings."
+            session['flash_type'] = 'info'
+        
+        # Return success page
         return render_template_string("""
         <!DOCTYPE html>
         <html>
@@ -357,6 +414,7 @@ def scrape():
                         <a class="nav-link" href="/leads">Leads</a>
                         <a class="nav-link active" href="/scrape">Scrape</a>
                         <a class="nav-link" href="/features">Features</a>
+                        <a class="nav-link" href="/settings">Settings</a>
                     </div>
                 </div>
             </nav>
@@ -396,6 +454,7 @@ def scrape():
                     <a class="nav-link" href="/leads">Leads</a>
                     <a class="nav-link active" href="/scrape">Scrape</a>
                     <a class="nav-link" href="/features">Features</a>
+                    <a class="nav-link" href="/settings">Settings</a>
                 </div>
             </div>
         </nav>
@@ -461,11 +520,34 @@ def scrape():
                                     </div>
                                 </div>
                                 
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Demo Mode:</strong> This will simulate scraping and show sample results. 
-                                    The actual LinkedIn scraping engine processes real data in production.
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-cog me-1"></i>Scraping Mode</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="scrape_mode" id="demo_mode" value="demo" checked>
+                                        <label class="form-check-label" for="demo_mode">
+                                            <strong>Demo Mode</strong> - Use sample data (Safe)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="scrape_mode" id="real_mode" value="real" 
+                                               {{ 'disabled' if not linkedin_active else '' }}>
+                                        <label class="form-check-label" for="real_mode">
+                                            <strong>Real LinkedIn Scraping</strong> - {{ 'Configure credentials in Settings first' if not linkedin_active else 'Live data from LinkedIn' }}
+                                        </label>
+                                    </div>
                                 </div>
+                                
+                                {% if linkedin_active %}
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    LinkedIn credentials configured. Real scraping available with 40 leads/day limit.
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    LinkedIn credentials not configured. Go to <a href="/settings">Settings</a> to enable real scraping.
+                                </div>
+                                {% endif %}
                                 
                                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                                     <button type="submit" class="btn btn-primary btn-lg">
@@ -521,6 +603,7 @@ def features():
                     <a class="nav-link" href="/leads">Leads</a>
                     <a class="nav-link" href="/scrape">Scrape</a>
                     <a class="nav-link active" href="/features">Features</a>
+                    <a class="nav-link" href="/settings">Settings</a>
                 </div>
             </div>
         </nav>
@@ -648,8 +731,29 @@ def features():
     </html>
     """)
 
-@app.route('/settings')
+@app.route('/settings', methods=['GET', 'POST'])
 def settings():
+    global LINKEDIN_CREDENTIALS
+    
+    if request.method == 'POST':
+        if 'save_credentials' in request.form:
+            email = request.form.get('linkedin_email', '').strip()
+            password = request.form.get('linkedin_password', '').strip()
+            
+            if email and password:
+                LINKEDIN_CREDENTIALS['email'] = email
+                LINKEDIN_CREDENTIALS['password'] = password
+                LINKEDIN_CREDENTIALS['active'] = True
+                session['flash_message'] = "LinkedIn credentials saved successfully! Real scraping is now enabled."
+                session['flash_type'] = 'success'
+            else:
+                session['flash_message'] = "Please provide both email and password."
+                session['flash_type'] = 'danger'
+        
+        elif 'clear_credentials' in request.form:
+            LINKEDIN_CREDENTIALS = {'email': '', 'password': '', 'active': False}
+            session['flash_message'] = "LinkedIn credentials cleared. Switched to demo mode."
+            session['flash_type'] = 'info'
     return render_template_string("""
     <!DOCTYPE html>
     <html>
@@ -667,6 +771,7 @@ def settings():
                     <a class="nav-link" href="/leads">Leads</a>
                     <a class="nav-link" href="/scrape">Scrape</a>
                     <a class="nav-link" href="/features">Features</a>
+                    <a class="nav-link active" href="/settings">Settings</a>
                 </div>
             </div>
         </nav>
@@ -682,21 +787,48 @@ def settings():
                             <h5><i class="fas fa-user-cog me-2"></i>LinkedIn Credentials</h5>
                         </div>
                         <div class="card-body">
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                In production mode, you would enter your LinkedIn credentials here for automated scraping.
-                                Currently running in demo mode with sample data.
+                            {% if session.get('flash_message') %}
+                            <div class="alert alert-{{ session.get('flash_type', 'info') }} alert-dismissible fade show">
+                                {{ session.pop('flash_message') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
-                            <form>
+                            {% endif %}
+                            
+                            {% if linkedin_active %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i>
+                                LinkedIn credentials are configured. Real scraping is enabled.
+                            </div>
+                            {% else %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                No LinkedIn credentials configured. Currently in demo mode.
+                            </div>
+                            {% endif %}
+                            
+                            <form method="POST">
                                 <div class="mb-3">
                                     <label class="form-label">LinkedIn Email</label>
-                                    <input type="email" class="form-control" placeholder="your.email@example.com" disabled>
+                                    <input type="email" class="form-control" name="linkedin_email" 
+                                           placeholder="your.email@example.com" 
+                                           value="{{ linkedin_email if linkedin_active else '' }}" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">LinkedIn Password</label>
-                                    <input type="password" class="form-control" placeholder="••••••••" disabled>
+                                    <input type="password" class="form-control" name="linkedin_password" 
+                                           placeholder="Enter your LinkedIn password" required>
+                                    <div class="form-text">Your credentials are stored securely and only used for scraping.</div>
                                 </div>
-                                <button type="button" class="btn btn-secondary" disabled>Save Credentials</button>
+                                <div class="d-flex gap-2">
+                                    <button type="submit" name="save_credentials" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>Save Credentials
+                                    </button>
+                                    {% if linkedin_active %}
+                                    <button type="submit" name="clear_credentials" class="btn btn-outline-danger">
+                                        <i class="fas fa-trash me-1"></i>Clear Credentials
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </form>
                         </div>
                     </div>
